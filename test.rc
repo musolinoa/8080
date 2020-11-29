@@ -1,0 +1,2 @@
+#!/bin/rc
+mk && {echo load; echo run} | 6.out
