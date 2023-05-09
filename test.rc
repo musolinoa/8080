@@ -1,2 +1,5 @@
 #!/bin/rc
-mk && {echo load; echo run} | 6.out
+mk && 6.out >out.log <<EOF
+load
+run
+EOF
