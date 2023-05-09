@@ -191,6 +191,10 @@ enum{
 	MAXTRACEOPS = 10,
 };
 
+extern Biobuf *stdin;
+extern Biobuf *stdout;
+extern Biobuf *stderr;
+
 extern CPU ocpu, cpu;
 extern Insn insn;
 extern int debug;

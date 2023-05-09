@@ -4,6 +4,10 @@
 #include "dat.h"
 #include "fns.h"
 
+Biobuf *stdin;
+Biobuf *stdout;
+Biobuf *stderr;
+
 CPU ocpu, cpu;
 Insn insn;
 
@@ -82,7 +86,7 @@ cpustep(void)
 	insn.pc = cpu.PC;
 	insn.op = decodeop(buf[0] = ifetch(&cpu));
 	if(insn.op == -1){
-		fprint(2, "illegal opcode %#.2uhhx @ pc=%#.4uhx\n", buf[0], insn.pc);
+		Bprint(stderr, "illegal opcode %#.2uhhx @ pc=%#.4uhx\n", buf[0], insn.pc);
 		trap();
 	}
 	switch(ilen = insnlen(insn.op)){
@@ -126,18 +130,16 @@ static void
 prompt(void)
 {
 	static char prev[256] = "";
-	int n;
-	char buf[256];
+	char *buf;
 
 	trapinit();
-	if(interactive)
-		print("8080> ");
-	n = read(0, buf, sizeof(buf) - 1);
-	if(n <= 0)
+	if(interactive){
+		Bprint(stdout, "8080> ");
+		Bflush(stdout);
+	}
+	buf = Brdstr(stdin, '\n', 1);
+	if(Blinelen(stdin) <= 0)
 		exits("eof");
-	if(buf[n-1] != '\n')
-		exits("nl");
-	buf[n-1] = 0;
 	if(strcmp(buf, "") == 0){
 		if(strcmp(prev, "") == 0)
 			return;
@@ -148,7 +150,7 @@ prompt(void)
 	}else if(strcmp(buf, "bpset") == 0){
 	}else if(strcmp(buf, "load") == 0){
 		if(loadrom("invaders.rom", 0) < 0)
-			fprint(2, "load failed: %r\n");
+			Bprint(stderr, "load failed: %r\n");
 	}else if(strcmp(buf, "reg") == 0){
 		dumpregs();
 	}else if(strcmp(buf, "run") == 0){
@@ -156,8 +158,8 @@ prompt(void)
 			cpu = ocpu;
 		else
 			for(;;){
-				//print("%#.4uhx\t", cpu.PC);
-				//das(mem+cpu.PC,nelem(mem));
+				Bprint(stdout, "%#.4uhx\t", cpu.PC);
+				das(mem+cpu.PC,nelem(mem));
 				cpustep();
 			}
 	}else if(strcmp(buf, "step") == 0){
@@ -173,7 +175,7 @@ prompt(void)
 	}else if(strcmp(buf, "reset") == 0){
 		cpureset();
 	}else{
-		fprint(2, "unknown command: %s\n", buf);
+		Bprint(stderr, "unknown command: %s\n", buf);
 		buf[0] = 0;
 	}
 	strcpy(prev, buf);
@@ -216,11 +218,12 @@ main(int argc, char **argv)
 	}ARGEND;
 	if(argc != 0)
 		usage();
+	stdin = Bfdopen(0, OREAD);
+	stdout = Bfdopen(1, OWRITE);
+	stderr = Bfdopen(2, OWRITE);
 	interactive = isatty();
 	fmtinstall('I', insnfmt);
 	cpureset();
-	if(loadrom("invaders.rom", 0) < 0)
-		fprint(2, "load failed: %r\n");
 	for(;;)
 		prompt();
 }

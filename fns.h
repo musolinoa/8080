@@ -6,7 +6,7 @@ void	itrace0(char *fmt, ...);
 char*	rnam(u8int);
 char*	rpnam(u8int);
 
-#define dprint(...) if(debug)fprint(2, __VA_ARGS__)
+#define dprint(...) if(debug)Bprint(stderr, __VA_ARGS__)
 #define itrace(...) if(tracing>0)itrace0(__VA_ARGS__)
 
 /* disassembler */

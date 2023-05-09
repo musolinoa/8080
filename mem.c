@@ -1,5 +1,6 @@
 #include <u.h>
 #include <libc.h>
+#include <bio.h>
 #include "dat.h"
 #include "fns.h"
 
@@ -7,7 +8,7 @@ u8int
 memread(u16int a)
 {
 	if(a >= MEMSZ){
-		fprint(2, "memread failed addr=%#.4x op=%#0.2x pc=%#.4x\n", a, insn.op, ocpu.PC);
+		Bprint(stderr, "memread failed addr=%#.4x op=%#0.2x pc=%#.4x\n", a, insn.op, ocpu.PC);
 		trap();
 	}
 	return mem[a];
@@ -17,7 +18,7 @@ void
 memwrite(u16int a, u8int x)
 {
 	if(a < ROMSZ || a >= MEMSZ){
-		fprint(2, "write failed addr=%#.4x op=%#0.2x pc=%#.4x\n", a, insn.op, ocpu.PC);
+		Bprint(stderr, "write failed addr=%#.4x op=%#0.2x pc=%#.4x\n", a, insn.op, ocpu.PC);
 		trap();
 	}
 	mem[a] = x;
@@ -27,7 +28,7 @@ u8int
 ifetch(CPU *cpu)
 {
 	if(cpu->PC >= ROMSZ){
-		fprint(2, "ifetch failed pc=%#.4x\n", cpu->PC);
+		Bprint(stderr, "ifetch failed pc=%#.4x\n", cpu->PC);
 		trap();
 	}
 	return memread(cpu->PC++);

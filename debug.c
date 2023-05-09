@@ -1,5 +1,6 @@
 #include <u.h>
 #include <libc.h>
+#include <bio.h>
 #include "dat.h"
 #include "fns.h"
 
@@ -61,7 +62,7 @@ rpnam(u8int r)
 void
 dumpinst(void)
 {
-	fprint(2, "op: %#.2x [%#.2x %#.2x]\n",
+	Bprint(stderr, "op: %#.2x [%#.2x %#.2x]\n",
 		mem[insn.pc+0], mem[insn.pc+1], mem[insn.pc+2]);
 }
 
@@ -83,31 +84,31 @@ dumpregs(void)
 {
 	int i;
 
-	fprint(2, "A=%#.2x\n", cpu.r[A]);
-	fprint(2, "B=%#.2x\n", cpu.r[B]);
-	fprint(2, "C=%#.2x\n", cpu.r[C]);
-	fprint(2, "D=%#.2x\n", cpu.r[D]);
-	fprint(2, "E=%#.2x\n", cpu.r[E]);
-	fprint(2, "H=%#.2x\n", cpu.r[H]);
-	fprint(2, "L=%#.2x\n", cpu.r[L]);
-	fprint(2, "F=%#.2x", cpu.flg);
+	Bprint(stderr, "A=%#.2x\n", cpu.r[A]);
+	Bprint(stderr, "B=%#.2x\n", cpu.r[B]);
+	Bprint(stderr, "C=%#.2x\n", cpu.r[C]);
+	Bprint(stderr, "D=%#.2x\n", cpu.r[D]);
+	Bprint(stderr, "E=%#.2x\n", cpu.r[E]);
+	Bprint(stderr, "H=%#.2x\n", cpu.r[H]);
+	Bprint(stderr, "L=%#.2x\n", cpu.r[L]);
+	Bprint(stderr, "F=%#.2x", cpu.flg);
 	if(cpu.flg != 0){
-		fprint(2, " (");
+		Bprint(stderr, " (");
 		for(i = 0; i < 8; i++)
 			if((cpu.flg&1<<i) != 0)
-				fprint(2, "%c", flagchar(i));
-		fprint(2, ")");
+				Bprint(stderr, "%c", flagchar(i));
+		Bprint(stderr, ")");
 	}
-	fprint(2, "\n");
-	fprint(2, "PC=%#.4x\n", cpu.PC);
-	fprint(2, "SP=%#.4x\n", cpu.SP);
+	Bprint(stderr, "\n");
+	Bprint(stderr, "PC=%#.4x\n", cpu.PC);
+	Bprint(stderr, "SP=%#.4x\n", cpu.SP);
 }
 
 void
 dumpmem(u16int s, u16int e)
 {
 	while(s < e){
-		fprint(2, "%.4x: %.2x\n", s, mem[s]);
+		Bprint(stderr, "%.4x: %.2x\n", s, mem[s]);
 		s++;
 	}
 }
@@ -118,9 +119,9 @@ itrace0(char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	fprint(2, "%#.4x ", insn.pc);
-	vfprint(2, fmt, args);
-	fprint(2, "\n");
+	Bprint(stderr, "%#.4x ", insn.pc);
+	Bvprint(stderr, fmt, args);
+	Bprint(stderr, "\n");
 	va_end(args);
 }
 
@@ -130,8 +131,8 @@ fatal(char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-	vfprint(2, fmt, args);
-	fprint(2, "\n");
+	Bvprint(stderr, fmt, args);
+	Bprint(stderr, "\n");
 	va_end(args);
 	dumpinst();
 	dumpregs();

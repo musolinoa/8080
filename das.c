@@ -471,7 +471,7 @@ das(uchar *mem, long mlen)
 
 	if((n = decode(&insn, mem, mlen)) < 0)
 		return -1;
-	print("\t%I\n", &insn);
+	Bprint(stdout, "\t%I\n", &insn);
 	return n;
 }
 
@@ -534,7 +534,7 @@ void
 cpuexec(CPU *cpu, Insn *insn)
 {
 	if(isa[insn->op].exec == nil){
-		fprint(2, "%s (%#.2uhhx) not implemented!\n", opstr(insn->op), insn->op);
+		Bprint(stderr, "%s (%#.2uhhx) not implemented!\n", opstr(insn->op), insn->op);
 		trap();
 	}
 	itrace(opstr(insn->op));
