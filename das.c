@@ -690,9 +690,13 @@ Xdcr(CPU *cpu, Insn *insn)
 
 	if(--x == 0)
 		cpu->flg |= Fzero;
-	cpu->flg &= ~Fsign;
+	else
+		cpu->flg &= ~Fzero;
+
 	if((x&0x80) != 0)
 		cpu->flg |= Fsign;
+	else
+		cpu->flg &= ~Fsign;
 
 	if(insn->r1 == M)
 		memwrite(a, x);
