@@ -1,3 +1,6 @@
+typedef struct Biobuf Biobuf;
+typedef struct Fmt Fmt;
+
 typedef struct CPU CPU;
 typedef struct Insn Insn;
 typedef struct ISA ISA;
@@ -27,6 +30,7 @@ enum{
 	BC,
 	DE,
 	HL,
+	MM,
 };
 
 enum{
@@ -184,6 +188,7 @@ struct BrkPt
 {
 	u16int addr;
 	uchar enabled;
+	uchar hit;
 };
 
 enum{

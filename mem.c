@@ -9,6 +9,7 @@ memread(u16int a)
 {
 	if(a >= MEMSZ){
 		Bprint(stderr, "memread failed addr=%#.4x op=%#0.2x pc=%#.4x\n", a, insn.op, ocpu.PC);
+		Bflush(stderr);
 		trap();
 	}
 	return mem[a];
@@ -19,6 +20,7 @@ memwrite(u16int a, u8int x)
 {
 	if(a < ROMSZ || a >= MEMSZ){
 		Bprint(stderr, "write failed addr=%#.4x op=%#0.2x pc=%#.4x\n", a, insn.op, ocpu.PC);
+		Bflush(stderr);
 		trap();
 	}
 	mem[a] = x;
@@ -29,6 +31,7 @@ ifetch(CPU *cpu)
 {
 	if(cpu->PC >= ROMSZ){
 		Bprint(stderr, "ifetch failed pc=%#.4x\n", cpu->PC);
+		Bflush(stderr);
 		trap();
 	}
 	return memread(cpu->PC++);

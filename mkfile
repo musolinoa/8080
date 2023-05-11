@@ -6,6 +6,7 @@ OFILES=\
 	mem.$O\
 	debug.$O\
 	das.$O\
+	io.$O\
 
 HFILES=\
 	dat.h\

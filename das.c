@@ -4,56 +4,57 @@
 #include "dat.h"
 #include "fns.h"
 
-static void Xshld(CPU*, Insn*);
-static void Xsbi(CPU*, Insn*);
-static void Xjm(CPU*, Insn*);
-static void Xdaa(CPU*, Insn*);
-static void Xcz(CPU*, Insn*);
-static void Xpchl(CPU*, Insn*);
-static void Xnop(CPU*, Insn*);
-static void Xjmp(CPU*, Insn*);
-static void Xlxi(CPU*, Insn*);
-static void Xmvi(CPU*, Insn*);
-static void Xpop(CPU*, Insn*);
-static void Xcall(CPU*, Insn*);
-static void Xldax(CPU*, Insn*);
-static void Xmov(CPU*, Insn*);
-static void Xinx(CPU*, Insn*);
-static void Xdcr(CPU*, Insn*);
-static void Xret(CPU*, Insn*);
-static void Xdad(CPU*, Insn*);
-static void Xsta(CPU*, Insn*);
-static void Xxra(CPU*, Insn*);
-static void Xout(CPU*, Insn*);
-static void Xora(CPU*, Insn*);
-static void Xlda(CPU*, Insn*);
-static void Xana(CPU*, Insn*);
-static void Xpush(CPU*, Insn*);
-static void Xxchg(CPU*, Insn*);
-static void Xinr(CPU*, Insn*);
-static void Xani(CPU*, Insn*);
-static void Xrar(CPU*, Insn*);
-static void Xori(CPU*, Insn*);
-static void Xcmp(CPU*, Insn*);
-static void Xrlc(CPU*, Insn*);
-static void Xrim(CPU*, Insn*);
-static void Xrrc(CPU*, Insn*);
-static void Xdcx(CPU*, Insn*);
-static void Xstax(CPU*, Insn*);
-static void Xcpi(CPU*, Insn*);
 static void Xadi(CPU*, Insn*);
-static void Xei(CPU*, Insn*);
+static void Xana(CPU*, Insn*);
+static void Xani(CPU*, Insn*);
+static void Xcall(CPU*, Insn*);
+static void Xcmp(CPU*, Insn*);
+static void Xcpi(CPU*, Insn*);
+static void Xcz(CPU*, Insn*);
+static void Xdaa(CPU*, Insn*);
+static void Xdad(CPU*, Insn*);
+static void Xdcr(CPU*, Insn*);
+static void Xdcx(CPU*, Insn*);
 static void Xdi(CPU*, Insn*);
+static void Xei(CPU*, Insn*);
 static void Xin(CPU*, Insn*);
+static void Xinr(CPU*, Insn*);
+static void Xinx(CPU*, Insn*);
 static void Xjc(CPU*, Insn*);
-static void Xjz(CPU*, Insn*);
+static void Xjm(CPU*, Insn*);
+static void Xjmp(CPU*, Insn*);
 static void Xjnc(CPU*, Insn*);
 static void Xjnz(CPU*, Insn*);
+static void Xjp(CPU*, Insn*);
+static void Xjz(CPU*, Insn*);
+static void Xlda(CPU*, Insn*);
+static void Xldax(CPU*, Insn*);
+static void Xlxi(CPU*, Insn*);
+static void Xmov(CPU*, Insn*);
+static void Xmvi(CPU*, Insn*);
+static void Xnop(CPU*, Insn*);
+static void Xora(CPU*, Insn*);
+static void Xori(CPU*, Insn*);
+static void Xout(CPU*, Insn*);
+static void Xpchl(CPU*, Insn*);
+static void Xpop(CPU*, Insn*);
+static void Xpush(CPU*, Insn*);
+static void Xrar(CPU*, Insn*);
 static void Xrc(CPU*, Insn*);
+static void Xret(CPU*, Insn*);
+static void Xrim(CPU*, Insn*);
+static void Xrlc(CPU*, Insn*);
 static void Xrnc(CPU*, Insn*);
 static void Xrnz(CPU*, Insn*);
+static void Xrrc(CPU*, Insn*);
 static void Xrz(CPU*, Insn*);
+static void Xsbi(CPU*, Insn*);
+static void Xshld(CPU*, Insn*);
+static void Xsta(CPU*, Insn*);
+static void Xstax(CPU*, Insn*);
 static void Xsui(CPU*, Insn*);
+static void Xxchg(CPU*, Insn*);
+static void Xxra(CPU*, Insn*);
 static void Xxthl(CPU*, Insn*);
 
 static int dec0(Insn*, uchar*, long);
@@ -116,6 +117,7 @@ static ISA isa[] = {
 	[Ojmp]{"JMP", Taddr, Xjmp},
 	[Ojnc]{"JNC", Taddr, Xjnc},
 	[Ojnz]{"JNZ", Taddr, Xjnz},
+	[Ojp]{"JP", Taddr, Xjp},
 	[Ojpo]{"JPO", Taddr},
 	[Ojz]{"JZ", Taddr, Xjz},
 	[Olda]{"LDA", Taddr, Xlda},
@@ -464,14 +466,39 @@ decode(Insn *insn, uchar *mem, long len)
 }
 
 int
-das(uchar *mem, long mlen)
+das1(uchar *s, long len)
 {
 	int n;
 	Insn insn;
 
-	if((n = decode(&insn, mem, mlen)) < 0)
+	if((n = decode(&insn, s, len)) < 0)
 		return -1;
-	Bprint(stdout, "\t%I\n", &insn);
+	Bprint(stdout, "%#.4ullx:\t%I\n", s - mem, &insn);
+	//Bflush(stdout);
+	return n;
+}
+
+int
+das(uchar *s, uchar *e, int max)
+{
+	int n, isz;
+
+	n = 0;
+	for(;;){
+		if(s >= e)
+			break;
+		if(max >= 0 && n >= max)
+			break;
+		if((isz = das1(s, e-s)) < 0){
+			n = -1;
+			break;
+		}
+		if(isz == 0)
+			break;
+		n++;
+		s += isz;
+	}
+	Bflush(stdout);
 	return n;
 }
 
@@ -522,11 +549,12 @@ dasfile(char *file)
 		}
 	}
 	while(buflen > 0){
-		print("%#.4x\t???\t%#.2x\n", addr, buf[0]);
+		Bprint(stdout, "%#.4x\t???\t%#.2x\n", addr, buf[0]);
 		addr++;
 		bp++;
 		buflen--;
 	}
+	Bflush(stdout);
 	return 0;
 }
 
@@ -535,6 +563,7 @@ cpuexec(CPU *cpu, Insn *insn)
 {
 	if(isa[insn->op].exec == nil){
 		Bprint(stderr, "%s (%#.2uhhx) not implemented!\n", opstr(insn->op), insn->op);
+		Bflush(stderr);
 		trap();
 	}
 	itrace(opstr(insn->op));
@@ -544,10 +573,18 @@ cpuexec(CPU *cpu, Insn *insn)
 static u16int
 rpair(CPU *cpu, u8int rp)
 {
+	u16int x;
+
 	switch(rp){
 	case BC: return cpu->r[B]<<8 | cpu->r[C];
 	case DE: return cpu->r[D]<<8 | cpu->r[E];
-	case HL: return cpu->r[H]<<8 | cpu->r[L];
+	case HL:
+		x = cpu->r[H]<<8 | cpu->r[L];
+		if(rp == HL && x == 0){
+			Bprint(stderr, "HL = 0 @ pc=%#.4uhx\n", cpu->PC);
+			Bflush(stderr);
+		}
+		return x;
 	}
 	fatal("unknown register pair %d", rp);
 	return 0;
@@ -556,6 +593,10 @@ rpair(CPU *cpu, u8int rp)
 static void
 wpair(CPU *cpu, u8int rp, u16int x)
 {
+	if(rp == HL && x == 0){
+		Bprint(stderr, "HL ← 0 @ pc=%#.4uhx\n", cpu->PC);
+		Bflush(stderr);
+	}
 	cpu->r[(rp<<1)+B] = x>>8;
 	cpu->r[(rp<<1)+B+1] = x;
 }
@@ -563,6 +604,13 @@ wpair(CPU *cpu, u8int rp, u16int x)
 static void
 Xnop(CPU*, Insn*)
 {
+}
+
+static void
+Xjp(CPU *cpu, Insn *insn)
+{
+	if((cpu->flg & Fsign) == 0)
+		cpu->PC = insn->addr;
 }
 
 static void
@@ -596,6 +644,8 @@ Xmvi(CPU *cpu, Insn *insn)
 static void
 Xcall(CPU *cpu, Insn *insn)
 {
+	//Bprint(stderr, "CALL %#.4uhx @ pc=%#.4uhx\n", insn->addr, insn->pc);
+	//Bflush(stderr);
 	push16(cpu, cpu->PC);
 	cpu->PC = insn->addr;
 }
@@ -669,8 +719,8 @@ Xdad(CPU *cpu, Insn *insn)
 	x += rpair(cpu, HL);
 	if(x>>16 > 0)
 		cpu->flg |= Fcarry;
-	//else
-		//cpu->flg &= ~Fcarry;
+	else
+		cpu->flg &= ~Fcarry;
 	wpair(cpu, HL, x);
 }
 
@@ -703,11 +753,6 @@ Xxra(CPU *cpu, Insn *insn)
 		cpu->flg &= ~Fsign;
 
 	cpu->flg &= ~(Fcarry|Fhcarry);
-}
-
-void
-iow(u16int a, u8int v)
-{
 }
 
 static void
@@ -775,21 +820,37 @@ Xana(CPU *cpu, Insn *insn)
 static void
 Xpush(CPU *cpu, Insn *insn)
 {
-	if(insn->rp == 3){
+	u16int x;
+
+	if(insn->rp == MM){
 		push8(cpu, cpu->r[A]);
 		push8(cpu, cpu->flg);
-	}else
-		push16(cpu, rpair(cpu, insn->rp));
+	}else{
+		x = rpair(cpu, insn->rp);
+		if(insn->rp == HL && x == 0){
+			Bprint(stderr, "pushed %uhd from %s @ %#.4uhx\n", x, rpnam(insn->rp), insn->pc);
+			Bflush(stderr);
+		}
+		push16(cpu, x);
+	}
 }
 
 static void
 Xpop(CPU *cpu, Insn *insn)
 {
-	if(insn->rp == 3){
+	u16int x;
+
+	if(insn->rp == MM){
 		cpu->flg = pop8(cpu);
 		cpu->r[A] = pop8(cpu);
-	}else
-		wpair(cpu, insn->rp, pop16(cpu));
+	}else{
+		x = pop16(cpu);
+		if(insn->rp == HL && x == 0){
+			Bprint(stderr, "popped %uhd into %s @ %#.4uhx\n", x, rpnam(insn->rp), insn->pc);
+			Bflush(stderr);
+		}
+		wpair(cpu, insn->rp, x);
+	}
 }
 
 static void
@@ -830,6 +891,19 @@ Xinr(CPU *cpu, Insn *insn)
 	cpu->flg &= ~Fhcarry;
 }
 
+static int
+evenpar(u8int x)
+{
+	u8int r;
+
+	r = 1;
+	while(x != 0){
+		r ^= x&1;
+		x >>= 1;
+	}
+	return r;
+}
+
 static void
 Xani(CPU *cpu, Insn *insn)
 {
@@ -844,6 +918,11 @@ Xani(CPU *cpu, Insn *insn)
 		cpu->flg |= Fsign;
 	else
 		cpu->flg &= ~Fsign;
+
+	if(evenpar(cpu->r[A]))
+		cpu->flg |= Fparity;
+	else
+		cpu->flg &= ~Fparity;
 
 	cpu->flg &= ~(Fcarry|Fhcarry);
 }
@@ -1007,9 +1086,9 @@ Xdi(CPU *cpu, Insn*)
 }
 
 static void
-Xin(CPU *cpu, Insn*)
+Xin(CPU *cpu, Insn *insn)
 {
-	cpu->r[A] = 0;
+	cpu->r[A] = ior(insn->addr);
 }
 
 static void

@@ -1,5 +1,7 @@
 #!/bin/rc
-mk && 6.out >out.log <<EOF
-load
-run
+mk && 6.out -i <{cat <<EOF
+load invaders.rom
+bpset 0x18dc
+bpset 0x18df
 EOF
+}

@@ -1,3 +1,5 @@
+typedef struct Fmt Fmt;
+
 /* debug */
 void	dumpregs(void);
 void	dumpmem(u16int, u16int);
@@ -12,7 +14,8 @@ char*	rpnam(u8int);
 /* disassembler */
 #pragma	   varargck    type  "I"   Insn*
 int	insnfmt(Fmt*);
-int	das(uchar*, long);
+int	das1(uchar*, long);
+int das(uchar*, uchar*, int);
 int dasfile(char*);
 
 /* isa */
@@ -34,3 +37,7 @@ u8int	pop8(CPU*);
 u16int	pop16(CPU*);
 void	push8(CPU*, u8int);
 void	push16(CPU*, u16int);
+
+/* i/o */
+u8int	ior(u16int);
+void	iow(u16int, u8int);

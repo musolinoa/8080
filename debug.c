@@ -59,11 +59,18 @@ rpnam(u8int r)
 	return "XX";
 }
 
-void
-dumpinst(void)
+static void
+dumpinst0(void)
 {
 	Bprint(stderr, "op: %#.2x [%#.2x %#.2x]\n",
 		mem[insn.pc+0], mem[insn.pc+1], mem[insn.pc+2]);
+}
+
+void
+dumpinst(void)
+{
+	dumpinst0();
+	Bflush(stderr);
 }
 
 static char
@@ -79,8 +86,8 @@ flagchar(int f)
 	return 0;
 }
 
-void
-dumpregs(void)
+static void
+dumpregs0(void)
 {
 	int i;
 
@@ -105,12 +112,20 @@ dumpregs(void)
 }
 
 void
+dumpregs(void)
+{
+	dumpregs0();
+	Bflush(stderr);
+}
+
+void
 dumpmem(u16int s, u16int e)
 {
 	while(s < e){
 		Bprint(stderr, "%.4x: %.2x\n", s, mem[s]);
 		s++;
 	}
+	Bflush(stderr);
 }
 
 void
@@ -122,6 +137,7 @@ itrace0(char *fmt, ...)
 	Bprint(stderr, "%#.4x ", insn.pc);
 	Bvprint(stderr, fmt, args);
 	Bprint(stderr, "\n");
+	Bflush(stderr);
 	va_end(args);
 }
 
@@ -134,7 +150,8 @@ fatal(char *fmt, ...)
 	Bvprint(stderr, fmt, args);
 	Bprint(stderr, "\n");
 	va_end(args);
-	dumpinst();
-	dumpregs();
+	dumpinst0();
+	dumpregs0();
+	Bflush(stderr);
 	exits("fatal");
 }
