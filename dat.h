@@ -16,21 +16,21 @@ struct CPU
 };
 
 enum{
-	B,
-	C,
-	D,
-	E,
-	H,
-	L,
-	M, /* dummy */
-	A,
+	RB,
+	RC,
+	RD,
+	RE,
+	RH,
+	RL,
+	RM, /* dummy */
+	RA,
 };
 
 enum{
-	BC,
-	DE,
-	HL,
-	MM,
+	RBC,
+	RDE,
+	RHL,
+	RMM,
 };
 
 enum{

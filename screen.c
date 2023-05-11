@@ -14,7 +14,7 @@ static void
 usage(void)
 {
 	fprint(2, "usage: %s\n", argv0);
-	exits("usage");
+	threadexitsall("usage");
 }
 
 static void

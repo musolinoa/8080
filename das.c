@@ -290,7 +290,7 @@ decrr(Insn *insn, uchar *mem, long)
 {
 	insn->r1 = (mem[0]>>3)&0x7;
 	insn->r2 = mem[0]&0x7;
-	if(insn->r1 == M && insn->r2 == M)
+	if(insn->r1 == RM && insn->r2 == RM)
 		insn->op = Onop;
 	return 1;
 }
@@ -573,18 +573,10 @@ cpuexec(CPU *cpu, Insn *insn)
 static u16int
 rpair(CPU *cpu, u8int rp)
 {
-	u16int x;
-
 	switch(rp){
-	case BC: return cpu->r[B]<<8 | cpu->r[C];
-	case DE: return cpu->r[D]<<8 | cpu->r[E];
-	case HL:
-		x = cpu->r[H]<<8 | cpu->r[L];
-		if(rp == HL && x == 0){
-			Bprint(stderr, "HL = 0 @ pc=%#.4uhx\n", cpu->PC);
-			Bflush(stderr);
-		}
-		return x;
+	case RBC: return cpu->r[RB]<<8 | cpu->r[RC];
+	case RDE: return cpu->r[RD]<<8 | cpu->r[RE];
+	case RHL: return cpu->r[RH]<<8 | cpu->r[RL];
 	}
 	fatal("unknown register pair %d", rp);
 	return 0;
@@ -593,12 +585,8 @@ rpair(CPU *cpu, u8int rp)
 static void
 wpair(CPU *cpu, u8int rp, u16int x)
 {
-	if(rp == HL && x == 0){
-		Bprint(stderr, "HL ← 0 @ pc=%#.4uhx\n", cpu->PC);
-		Bflush(stderr);
-	}
-	cpu->r[(rp<<1)+B] = x>>8;
-	cpu->r[(rp<<1)+B+1] = x;
+	cpu->r[(rp<<1)] = x>>8;
+	cpu->r[(rp<<1)+1] = x;
 }
 
 static void
@@ -633,8 +621,8 @@ Xmvi(CPU *cpu, Insn *insn)
 {
 	u16int addr;
 
-	if(insn->r1 == M){
-		addr = rpair(cpu, HL);
+	if(insn->r1 == RM){
+		addr = rpair(cpu, RHL);
 		memwrite(addr, insn->imm);
 	}else{
 		cpu->r[insn->r1] = insn->imm;
@@ -644,8 +632,6 @@ Xmvi(CPU *cpu, Insn *insn)
 static void
 Xcall(CPU *cpu, Insn *insn)
 {
-	//Bprint(stderr, "CALL %#.4uhx @ pc=%#.4uhx\n", insn->addr, insn->pc);
-	//Bflush(stderr);
 	push16(cpu, cpu->PC);
 	cpu->PC = insn->addr;
 }
@@ -653,18 +639,18 @@ Xcall(CPU *cpu, Insn *insn)
 static void
 Xldax(CPU *cpu, Insn *insn)
 {
-	cpu->r[A] = memread(rpair(cpu, insn->rp));
+	cpu->r[RA] = memread(rpair(cpu, insn->rp));
 }
 
 static void
 Xmov(CPU *cpu, Insn *insn)
 {
-	if(insn->r2 == M && insn->r1 == M)
+	if(insn->r2 == RM && insn->r1 == RM)
 		return;
-	if(insn->r2 == M)
-		cpu->r[insn->r1] = memread(rpair(cpu, HL));
-	else if(insn->r1 == M)
-		memwrite(rpair(cpu, HL), cpu->r[insn->r2]);
+	if(insn->r2 == RM)
+		cpu->r[insn->r1] = memread(rpair(cpu, RHL));
+	else if(insn->r1 == RM)
+		memwrite(rpair(cpu, RHL), cpu->r[insn->r2]);
 	else
 		cpu->r[insn->r1] = cpu->r[insn->r2];
 }
@@ -680,8 +666,8 @@ Xdcr(CPU *cpu, Insn *insn)
 {
 	u16int a, x;
 
-	if(insn->r1 == M){
-		a = rpair(cpu, HL);
+	if(insn->r1 == RM){
+		a = rpair(cpu, RHL);
 		x = memread(a);
 	}else{
 		a = 0;
@@ -698,7 +684,7 @@ Xdcr(CPU *cpu, Insn *insn)
 	else
 		cpu->flg &= ~Fsign;
 
-	if(insn->r1 == M)
+	if(insn->r1 == RM)
 		memwrite(a, x);
 	else
 		cpu->r[insn->r1] = x;
@@ -720,18 +706,18 @@ Xdad(CPU *cpu, Insn *insn)
 	}else{
 		x = rpair(cpu, insn->rp);
 	}
-	x += rpair(cpu, HL);
+	x += rpair(cpu, RHL);
 	if(x>>16 > 0)
 		cpu->flg |= Fcarry;
 	else
 		cpu->flg &= ~Fcarry;
-	wpair(cpu, HL, x);
+	wpair(cpu, RHL, x);
 }
 
 static void
 Xsta(CPU *cpu, Insn *insn)
 {
-	memwrite(insn->addr, cpu->r[A]);
+	memwrite(insn->addr, cpu->r[RA]);
 }
 
 static void
@@ -739,19 +725,19 @@ Xxra(CPU *cpu, Insn *insn)
 {
 	u8int x;
 
-	if(insn->r1 == M)
-		x = memread(rpair(cpu, HL));
+	if(insn->r1 == RM)
+		x = memread(rpair(cpu, RHL));
 	else
 		x = cpu->r[insn->r1];
 
-	cpu->r[A] ^= x;
+	cpu->r[RA] ^= x;
 
-	if(cpu->r[A] == 0)
+	if(cpu->r[RA] == 0)
 		cpu->flg |= Fzero;
 	else
 		cpu->flg &= ~Fzero;
 
-	if((cpu->r[A] & 0x80) != 0)
+	if((cpu->r[RA] & 0x80) != 0)
 		cpu->flg |= Fsign;
 	else
 		cpu->flg &= ~Fsign;
@@ -762,7 +748,7 @@ Xxra(CPU *cpu, Insn *insn)
 static void
 Xout(CPU *cpu, Insn *insn)
 {
-	iow(insn->imm<<8|insn->imm, cpu->r[A]);
+	iow(insn->imm<<8|insn->imm, cpu->r[RA]);
 }
 
 static void
@@ -770,19 +756,19 @@ Xora(CPU *cpu, Insn *insn)
 {
 	u8int x;
 
-	if(insn->r1 == M)
-		x = memread(rpair(cpu, HL));
+	if(insn->r1 == RM)
+		x = memread(rpair(cpu, RHL));
 	else
 		x = cpu->r[insn->r1];
 
-	cpu->r[A] |= x;
+	cpu->r[RA] |= x;
 
-	if(cpu->r[A] == 0)
+	if(cpu->r[RA] == 0)
 		cpu->flg |= Fzero;
 	else
 		cpu->flg &= ~Fzero;
 
-	if((cpu->r[A] & 0x80) != 0)
+	if((cpu->r[RA] & 0x80) != 0)
 		cpu->flg |= Fsign;
 	else
 		cpu->flg &= ~Fsign;
@@ -793,7 +779,7 @@ Xora(CPU *cpu, Insn *insn)
 static void
 Xlda(CPU *cpu, Insn *insn)
 {
-	cpu->r[A] = memread(insn->addr);
+	cpu->r[RA] = memread(insn->addr);
 }
 
 static void
@@ -801,19 +787,19 @@ Xana(CPU *cpu, Insn *insn)
 {
 	u8int x;
 
-	if(insn->r1 == M)
-		x = memread(rpair(cpu, HL));
+	if(insn->r1 == RM)
+		x = memread(rpair(cpu, RHL));
 	else
 		x = cpu->r[insn->r1];
 
-	cpu->r[A] &= x;
+	cpu->r[RA] &= x;
 
-	if(cpu->r[A] == 0)
+	if(cpu->r[RA] == 0)
 		cpu->flg |= Fzero;
 	else
 		cpu->flg &= ~Fzero;
 
-	if((cpu->r[A] & 0x80) != 0)
+	if((cpu->r[RA] & 0x80) != 0)
 		cpu->flg |= Fsign;
 	else
 		cpu->flg &= ~Fsign;
@@ -824,36 +810,22 @@ Xana(CPU *cpu, Insn *insn)
 static void
 Xpush(CPU *cpu, Insn *insn)
 {
-	u16int x;
-
-	if(insn->rp == MM){
-		push8(cpu, cpu->r[A]);
+	if(insn->rp == RMM){
+		push8(cpu, cpu->r[RA]);
 		push8(cpu, cpu->flg);
 	}else{
-		x = rpair(cpu, insn->rp);
-		if(insn->rp == HL && x == 0){
-			Bprint(stderr, "pushed %uhd from %s @ %#.4uhx\n", x, rpnam(insn->rp), insn->pc);
-			Bflush(stderr);
-		}
-		push16(cpu, x);
+		push16(cpu, rpair(cpu, insn->rp));
 	}
 }
 
 static void
 Xpop(CPU *cpu, Insn *insn)
 {
-	u16int x;
-
-	if(insn->rp == MM){
+	if(insn->rp == RMM){
 		cpu->flg = pop8(cpu);
-		cpu->r[A] = pop8(cpu);
+		cpu->r[RA] = pop8(cpu);
 	}else{
-		x = pop16(cpu);
-		if(insn->rp == HL && x == 0){
-			Bprint(stderr, "popped %uhd into %s @ %#.4uhx\n", x, rpnam(insn->rp), insn->pc);
-			Bflush(stderr);
-		}
-		wpair(cpu, insn->rp, x);
+		wpair(cpu, insn->rp, pop16(cpu));
 	}
 }
 
@@ -862,9 +834,9 @@ Xxchg(CPU *cpu, Insn*)
 {
 	u16int x;
 
-	x = rpair(cpu, HL);
-	wpair(cpu, HL, rpair(cpu, DE));
-	wpair(cpu, DE, x);
+	x = rpair(cpu, RHL);
+	wpair(cpu, RHL, rpair(cpu, RDE));
+	wpair(cpu, RDE, x);
 }
 
 static void
@@ -873,8 +845,8 @@ Xinr(CPU *cpu, Insn *insn)
 	u8int x;
 	u16int a;
 
-	if(insn->r1 == M){
-		a = memread(rpair(cpu, HL));
+	if(insn->r1 == RM){
+		a = memread(rpair(cpu, RHL));
 		x = memread(a) + 1;
 		memwrite(a, x);
 	}else{
@@ -911,19 +883,19 @@ evenpar(u8int x)
 static void
 Xani(CPU *cpu, Insn *insn)
 {
-	cpu->r[A] &= insn->imm;
+	cpu->r[RA] &= insn->imm;
 
-	if(cpu->r[A] == 0)
+	if(cpu->r[RA] == 0)
 		cpu->flg |= Fzero;
 	else
 		cpu->flg &= ~Fzero;
 
-	if((cpu->r[A] & 0x80) != 0)
+	if((cpu->r[RA] & 0x80) != 0)
 		cpu->flg |= Fsign;
 	else
 		cpu->flg &= ~Fsign;
 
-	if(evenpar(cpu->r[A]))
+	if(evenpar(cpu->r[RA]))
 		cpu->flg |= Fparity;
 	else
 		cpu->flg &= ~Fparity;
@@ -937,24 +909,24 @@ Xrar(CPU *cpu, Insn*)
 	u8int ocarry;
 
 	ocarry = (cpu->flg&Fcarry) != 0;
-	if((cpu->r[A]&1) != 0)
+	if((cpu->r[RA]&1) != 0)
 		cpu->flg |= Fcarry;
 	else
 		cpu->flg &= ~Fcarry;
-	cpu->r[A] = ocarry<<7|((cpu->r[A]>>1)&0x7f);
+	cpu->r[RA] = ocarry<<7|((cpu->r[RA]>>1)&0x7f);
 }
 
 static void
 Xori(CPU *cpu, Insn *insn)
 {
-	cpu->r[A] |= insn->imm;
+	cpu->r[RA] |= insn->imm;
 
-	if(cpu->r[A] == 0)
+	if(cpu->r[RA] == 0)
 		cpu->flg |= Fzero;
 	else
 		cpu->flg &= ~Fzero;
 
-	if((cpu->r[A] & 0x80) != 0)
+	if((cpu->r[RA] & 0x80) != 0)
 		cpu->flg |= Fsign;
 	else
 		cpu->flg &= ~Fsign;
@@ -965,11 +937,11 @@ Xori(CPU *cpu, Insn *insn)
 static void
 Xcmp(CPU *cpu, Insn *insn)
 {
-	if(cpu->r[A] == insn->r1)
+	if(cpu->r[RA] == insn->r1)
 		cpu->flg |= Fzero;
 	else{
 		cpu->flg &= ~Fzero;
-		if(cpu->r[A] < insn->r1)
+		if(cpu->r[RA] < insn->r1)
 			cpu->flg |= Fcarry;
 		else
 			cpu->flg &= ~Fcarry;
@@ -981,12 +953,12 @@ Xrlc(CPU *cpu, Insn*)
 {
 	u8int ncarry;
 
-	ncarry = (cpu->r[A]&0x80) != 0;
+	ncarry = (cpu->r[RA]&0x80) != 0;
 	if(ncarry != 0)
 		cpu->flg |= Fcarry;
 	else
 		cpu->flg &= ~Fcarry;
-	cpu->r[A] = ((cpu->r[A]<<1)&0xfe)|ncarry;
+	cpu->r[RA] = ((cpu->r[RA]<<1)&0xfe)|ncarry;
 }
 
 static void
@@ -994,12 +966,12 @@ Xrrc(CPU *cpu, Insn*)
 {
 	u8int ncarry;
 
-	ncarry = cpu->r[A]&1;
+	ncarry = cpu->r[RA]&1;
 	if(ncarry != 0)
 		cpu->flg |= Fcarry;
 	else
 		cpu->flg &= ~Fcarry;
-	cpu->r[A] = ncarry<<7|((cpu->r[A]>>1)&0x7f);
+	cpu->r[RA] = ncarry<<7|((cpu->r[RA]>>1)&0x7f);
 }
 
 static void
@@ -1014,17 +986,17 @@ Xdcx(CPU *cpu, Insn *insn)
 static void
 Xstax(CPU *cpu, Insn *insn)
 {
-	memwrite(rpair(cpu, insn->rp), cpu->r[A]);
+	memwrite(rpair(cpu, insn->rp), cpu->r[RA]);
 }
 
 static void
 Xcpi(CPU *cpu, Insn *insn)
 {
-	if(cpu->r[A] == insn->imm)
+	if(cpu->r[RA] == insn->imm)
 		cpu->flg |= Fzero;
 	else{
 		cpu->flg &= ~Fzero;
-		if(cpu->r[A] < insn->imm)
+		if(cpu->r[RA] < insn->imm)
 			cpu->flg |= Fcarry;
 		else
 			cpu->flg &= ~Fcarry;
@@ -1036,17 +1008,17 @@ psz(CPU *cpu, int f)
 {
 	u8int x, p;
 
-	if(cpu->r[A] == 0){
+	if(cpu->r[RA] == 0){
 		if(f & Fzero) cpu->flg |= Fzero;
 		if(f & Fsign) cpu->flg &= ~Fsign;
 	}else{
 		if(f & Fzero) cpu->flg &= ~Fzero;
-		if((cpu->r[A] & 0x80) != 0)
+		if((cpu->r[RA] & 0x80) != 0)
 			if(f & Fsign) cpu->flg |= Fsign;
 	}
 
 	if(f & Fparity){
-		x = cpu->r[A];
+		x = cpu->r[RA];
 		p = 0;
 		p += (x&1); x >>= 1;
 		p += (x&1); x >>= 1;
@@ -1068,12 +1040,12 @@ Xadi(CPU *cpu, Insn *insn)
 {
 	u16int x;
 
-	x = cpu->r[A] + insn->imm;
+	x = cpu->r[RA] + insn->imm;
 	if((x>>8) > 0)
 		cpu->flg |= Fcarry;
 	else
 		cpu->flg &= ~Fcarry;
-	cpu->r[A] = x;
+	cpu->r[RA] = x;
 	psz(cpu, Fparity|Fsign|Fzero);
 }
 
@@ -1092,7 +1064,7 @@ Xdi(CPU *cpu, Insn*)
 static void
 Xin(CPU *cpu, Insn *insn)
 {
-	cpu->r[A] = ior(insn->addr);
+	cpu->r[RA] = ior(insn->addr);
 }
 
 static void
@@ -1157,7 +1129,7 @@ Xsui(CPU *cpu, Insn *insn)
 	u8int a, b;
 	u16int x;
 
-	a = cpu->r[A];
+	a = cpu->r[RA];
 	b = -insn->imm;
 	if((((a&0xf)+(b&0xf))&0x10) != 0)
 		cpu->flg |= Fhcarry;
@@ -1168,7 +1140,7 @@ Xsui(CPU *cpu, Insn *insn)
 		cpu->flg &= ~Fcarry;
 	else
 		cpu->flg |= Fcarry;
-	cpu->r[A] = x;
+	cpu->r[RA] = x;
 	psz(cpu, Fparity|Fsign|Fzero);
 }
 
@@ -1178,17 +1150,17 @@ Xxthl(CPU *cpu, Insn*)
 	u8int x;
 
 	x = memread(cpu->SP+0);
-	memwrite(cpu->SP+0, cpu->r[L]);
-	cpu->r[L] = x;
+	memwrite(cpu->SP+0, cpu->r[RL]);
+	cpu->r[RL] = x;
 	x = memread(cpu->SP+1);
-	memwrite(cpu->SP+1, cpu->r[H]);
-	cpu->r[H] = x;
+	memwrite(cpu->SP+1, cpu->r[RH]);
+	cpu->r[RH] = x;
 }
 
 static void
 Xpchl(CPU *cpu, Insn*)
 {
-	cpu->PC = rpair(cpu, HL);
+	cpu->PC = rpair(cpu, RHL);
 }
 
 static void
@@ -1205,22 +1177,22 @@ Xdaa(CPU *cpu, Insn*)
 {
 	u16int x;
 
-	if((cpu->flg&Fhcarry) != 0 || cpu->r[A] > 9){
-		x = (cpu->r[A]&0xf)+6;
+	if((cpu->flg&Fhcarry) != 0 || cpu->r[RA] > 9){
+		x = (cpu->r[RA]&0xf)+6;
 		if(x>>4 > 0)
 			cpu->flg |= Fhcarry;
 		else
 			cpu->flg &= ~Fhcarry;
-		cpu->r[A] = (cpu->r[A]&0xf0)|(x&0x0f);
+		cpu->r[RA] = (cpu->r[RA]&0xf0)|(x&0x0f);
 	}
 
-	if((cpu->flg&Fcarry) != 0 || (cpu->r[A]>>4) > 9){
-		x = (cpu->r[A]>>4)+6;
+	if((cpu->flg&Fcarry) != 0 || (cpu->r[RA]>>4) > 9){
+		x = (cpu->r[RA]>>4)+6;
 		if(x>>4 > 0)
 			cpu->flg |= Fcarry;
 		else
 			cpu->flg &= ~Fcarry;
-		cpu->r[A] = (x<<4)|(cpu->r[A]&0xf);
+		cpu->r[RA] = (x<<4)|(cpu->r[RA]&0xf);
 	}
 }
 
@@ -1241,6 +1213,6 @@ Xsbi(CPU *cpu, Insn *insn)
 static void
 Xshld(CPU *cpu, Insn *insn)
 {
-	memwrite(insn->addr+0, cpu->r[L]);
-	memwrite(insn->addr+1, cpu->r[H]);
+	memwrite(insn->addr+0, cpu->r[RL]);
+	memwrite(insn->addr+1, cpu->r[RH]);
 }

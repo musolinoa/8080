@@ -1,6 +1,7 @@
 #include <u.h>
 #include <libc.h>
 #include <bio.h>
+#include <thread.h>
 #include "dat.h"
 #include "fns.h"
 
@@ -36,14 +37,14 @@ char*
 rnam(u8int r)
 {
 	switch(r){
-	case B: return "B";
-	case C: return "C";
-	case D: return "D";
-	case E: return "E";
-	case H: return "H";
-	case L: return "L";
-	case M: return "M";
-	case A: return "A";
+	case RB: return "B";
+	case RC: return "C";
+	case RD: return "D";
+	case RE: return "E";
+	case RH: return "H";
+	case RL: return "L";
+	case RM: return "M";
+	case RA: return "A";
 	}
 	return "X";
 }
@@ -52,9 +53,9 @@ char*
 rpnam(u8int r)
 {
 	switch(r){
-	case BC: return "BC";
-	case DE: return "DE";
-	case HL: return "HL";
+	case RBC: return "BC";
+	case RDE: return "DE";
+	case RHL: return "HL";
 	}
 	return "XX";
 }
@@ -91,13 +92,13 @@ dumpregs0(void)
 {
 	int i;
 
-	Bprint(stderr, "A=%#.2x\n", cpu.r[A]);
-	Bprint(stderr, "B=%#.2x\n", cpu.r[B]);
-	Bprint(stderr, "C=%#.2x\n", cpu.r[C]);
-	Bprint(stderr, "D=%#.2x\n", cpu.r[D]);
-	Bprint(stderr, "E=%#.2x\n", cpu.r[E]);
-	Bprint(stderr, "H=%#.2x\n", cpu.r[H]);
-	Bprint(stderr, "L=%#.2x\n", cpu.r[L]);
+	Bprint(stderr, "A=%#.2x\n", cpu.r[RA]);
+	Bprint(stderr, "B=%#.2x\n", cpu.r[RB]);
+	Bprint(stderr, "C=%#.2x\n", cpu.r[RC]);
+	Bprint(stderr, "D=%#.2x\n", cpu.r[RD]);
+	Bprint(stderr, "E=%#.2x\n", cpu.r[RE]);
+	Bprint(stderr, "H=%#.2x\n", cpu.r[RH]);
+	Bprint(stderr, "L=%#.2x\n", cpu.r[RL]);
 	Bprint(stderr, "F=%#.2x", cpu.flg);
 	if(cpu.flg != 0){
 		Bprint(stderr, " (");
@@ -153,5 +154,5 @@ fatal(char *fmt, ...)
 	dumpinst0();
 	dumpregs0();
 	Bflush(stderr);
-	exits("fatal");
+	threadexitsall("fatal");
 }

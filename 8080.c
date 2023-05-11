@@ -2,6 +2,8 @@
 #include <libc.h>
 #include <bio.h>
 #include <ctype.h>
+#include <draw.h>
+#include <thread.h>
 #include "dat.h"
 #include "fns.h"
 
@@ -12,10 +14,15 @@ Biobuf *stderr;
 CPU ocpu, cpu;
 Insn insn;
 
+enum{
+	Width = 256,
+	Height = 224,
+};
+
 uchar mem[MEMSZ];
 uchar *rom = &mem[0];
 uchar *ram = &mem[ROMSZ];
-uchar *vid = &mem[ROMSZ+RAMSZ];
+uchar *vmem = &mem[ROMSZ+RAMSZ];
 
 int interactive;
 int debug;
@@ -29,7 +36,7 @@ static void
 usage(void)
 {
 	fprint(2, "usage: %s [-b addr] [-i script] [-t addr] [-T addr]\n", argv0);
-	exits("usage");
+	threadexitsall("usage");
 }
 
 int
@@ -284,7 +291,7 @@ docmd(Cmd *c)
 		}
 		break;
 	case Cexit:
-		exits(0);
+		threadexitsall(0);
 		break;
 	case Creset:
 		cpureset();
@@ -352,8 +359,52 @@ isatty(void)
 	return strcmp(buf, "/dev/cons") == 0;
 }
 
+static void
+resize(int w, int h)
+{
+	int fd;
+
+	if((fd = open("/dev/wctl", OWRITE)) < 0)
+		return;
+	fprint(fd, "resize -dx %d -dy %d", w, h);
+	close(fd);
+}
+
+static void
+scanout(void*)
+{
+	int i;
+	uchar *p;
+	Image *line;
+	Rectangle r;
+
+	line = allocimage(display, Rect(0,0,Width,1), GREY1, 0, DNofill);
+
+	for(;;){
+		p = vmem;
+		r.min = Pt(screen->r.min.x, screen->r.max.y-1);
+		r.max = Pt(screen->r.max.x, screen->r.max.y);
+		for(i = 0; i < Height/2; i++){
+			loadimage(line, Rect(0,0,Width,1), p, Width/8);
+			draw(screen, r, line, nil, ZP);
+			r = rectaddpt(r, Pt(0, -1));
+			p += Width/8;
+		}
+		flushimage(display, 1);
+		sleep(1000/30);
+		for(; i < Height; i++){
+			loadimage(line, Rect(0,0,Width,1), p, Width/8);
+			draw(screen, r, line, nil, ZP);
+			r = rectaddpt(r, Pt(0, -1));
+			p += Width/8;
+		}
+		flushimage(display, 1);
+		sleep(1000/30);
+	}
+}
+
 void
-main(int argc, char **argv)
+threadmain(int argc, char **argv)
 {
 	stdin = Bfdopen(0, OREAD);
 	stdout = Bfdopen(1, OWRITE);
@@ -386,6 +437,12 @@ main(int argc, char **argv)
 	}ARGEND;
 	if(argc != 0)
 		usage();
+	if(newwindow(nil) < 0)
+		sysfatal("newwindow: %r");
+	resize(Width, Height);
+	if(initdraw(nil, nil, nil) < 0)
+		sysfatal("initdraw: %r");
+	proccreate(scanout, nil, 1024);
 	interactive = isatty();
 	fmtinstall('I', insnfmt);
 	cpureset();
@@ -398,7 +455,7 @@ main(int argc, char **argv)
 		case -1:
 			sysfatal("error reading stdin: %r");
 		case 0:
-			exits(0);
+			threadexitsall(0);
 		}
 	}
 }
